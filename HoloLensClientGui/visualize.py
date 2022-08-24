@@ -96,7 +96,7 @@ def visualize(w_path):
     PV_images,AHAT_images,LT_images,LF_images,RF_images,LL_images,RR_images,eye_hands_images = load_images_timestamps_from_folder(str(w_path),flags)
     all_images = {**PV_images,**AHAT_images,**LT_images,**LF_images,**RF_images,**LL_images,**RR_images,**eye_hands_images}
 
-    pv_img = False
+    pv_img_flag = False
     lf_img = False
     rr_img = False
     ll_img = False
@@ -125,7 +125,7 @@ def visualize(w_path):
                 if(temp is not None):
                    # pv_image = PV_images[timestamp]
                    pv_image = temp
-                   pv_img = True
+                   pv_img_flag = True
 
             if (all_images.get(timestamp) is not None):
                 if (flags["AHaT_depth"] == True):
@@ -171,17 +171,21 @@ def visualize(w_path):
                     eye_hand_image = eye_hands_images[timestamp]
                     eh_img = True
 
-            all_flags = int(pv_img) + int(lf_img) + int(rf_img) + int(ll_img) + int(rr_img) + int(eh_img)
-            if(flags["PV"] and ((flags["AHaT_depth"] and pv_img and ahat_img) or flags["long_depth"] and pv_img and lt_img)):
+            all_flags = int(pv_img_flag) + int(lf_img) + int(rf_img) + int(ll_img) + int(rr_img) + int(eh_img)
+            if(flags["PV"] and ((flags["AHaT_depth"] and pv_img_flag and ahat_img) or flags["long_depth"] and pv_img_flag and lt_img)):
+                if (flags["eye_hands"] == True):
+                    rgb_img = eye_hand_image
+                else:
+                    rgb_img = pv_image
                 if (flags["AHaT_depth"] == True):
                     output_image = np.zeros((max(pv_height, ahat_height), pv_width + ahat_width, 3)).astype(np.uint8)
                     output_image[:, :, :] = (0, 0, 0)
-                    output_image[:pv_height, :pv_width, :3] = pv_image
+                    output_image[:pv_height, :pv_width, :3] = rgb_img
                     output_image[:ahat_height, pv_width:pv_width + ahat_width, :3] = ahat_image
                 elif (flags["long_depth"] == True):
                     output_image = np.zeros((max(pv_height, lt_height), pv_width + lt_width, 3)).astype(np.uint8)
                     output_image[:, :, :] = (0, 0, 0)
-                    output_image[:pv_height, :pv_width, :3] = pv_image
+                    output_image[:pv_height, :pv_width, :3] = rgb_img
                     output_image[:lt_height, pv_width:pv_width + lt_width, :3] = LT_image
             # elif (flags["PV"] and flags["long_depth"] and pv_img and lt_img):
             #     output_image = np.zeros((max(pv_height, lt_height), pv_width + lt_width, 3)).astype(np.uint8)
@@ -194,9 +198,9 @@ def visualize(w_path):
                 #numpy_vertical_concat = np.concatenate((numpy_horizontal_concat1, numpy_horizontal_concat2), axis=0)
                 video.write(output_image)
                # cv2.imshow('Hololens2 stream visualizer', numpy_horizontal_concat1)
-                cv2.imshow("frame",output_image)
-                if cv2.waitKey(20) & 0xFF == ord('q'):
-                    break
+                #cv2.imshow("frame",output_image)
+                #if cv2.waitKey(20) & 0xFF == ord('q'):
+                #    break
     video.release()
 
 

@@ -32,6 +32,7 @@ def process_all(w_path, project_hand_eye=True):
     if (w_path / "PV").exists():
         if project_hand_eye:
             project_hand_eye_to_pv(w_path)
+    return
 # Process depth if recorded
     for sensor_name in ["Depth Long Throw", "Depth AHaT"]:
         if (w_path / "{}".format(sensor_name)).exists():
@@ -42,7 +43,7 @@ def process_all(w_path, project_hand_eye=True):
 
 
 if __name__ == '__main__':
-    w_path = Path(r'C:\HoloLens\Clothet\Floor_Gloves_Eviatar_24082022_0921')
+    w_path = Path(r'C:\HoloLens\Drawer\Table_Bright light_Paul_24082022_1214')
     process_all(w_path, project_hand_eye=True)
 #     parser = argparse.ArgumentParser(description='Process recorded data.')
 #     parser.add_argument("--recording_path", required=True,

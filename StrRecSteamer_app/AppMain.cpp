@@ -80,14 +80,22 @@ AppMain::AppMain() :
 	m_mixedReality.EnableSurfaceMapping();
 //	m_mixedReality.EnableQRCodeTracking();
 
-	const float rootMenuHeight = 0.50f;
+	const float rootMenuHeight = 0.60f;
+	const float rootMenuWidth = 0.95f;
+
+	/*float slateWidth = XMVectorGetX(m_size);
+	float slateHeight = XMVectorGetY(m_size);*/
+
+
 	XMVECTOR mainButtonSize = XMVectorSet(0.04f, 0.04f, 0.015f, 0.0f);
-
+	float green_hue = 15.0f;
 	m_menu.HideTitleBar();
-	m_menu.SetSize(XMVectorSet(0.5f, rootMenuHeight, 0.01f, 1.0f));
+	m_menu.SetSize(XMVectorSet(rootMenuWidth, rootMenuHeight, 0.01f, 1.0f));
+	m_menu.SetColor(XMVectorSet(0.0f, 0.2f, 0.05f, 0.05f));
+	m_menu.SetPosition(XMVectorSet(0.0f, -0.5f, -3.5f, 0.0f));
 
-	m_menu.AddButton(make_shared<FloatingSlateButton>(XMVectorSet(-0.025f, 0.0f, 0.0f, 1.0f), mainButtonSize, XMVectorSet(0.0f, 0.5f, 0.0f, 1.0f), (unsigned)ButtonID::Start, this, "Start"));
-	m_menu.AddButton(make_shared<FloatingSlateButton>(XMVectorSet(0.025f, 0.0f, 0.0f, 1.0f), mainButtonSize, XMVectorSet(0.5f, 0.0f, 0.0f, 1.0f), (unsigned)ButtonID::Stop, this, "Stop"));
+	//m_menu.AddButton(make_shared<FloatingSlateButton>(XMVectorSet(-0.025f, 0.0f, 0.0f, 1.0f), mainButtonSize, XMVectorSet(0.0f, 0.5f, 0.0f, 1.0f), (unsigned)ButtonID::Start, this, "Start"));
+	//m_menu.AddButton(make_shared<FloatingSlateButton>(XMVectorSet(0.025f, 0.0f, 0.0f, 1.0f), mainButtonSize, XMVectorSet(0.5f, 0.0f, 0.0f, 1.0f), (unsigned)ButtonID::Stop, this, "Stop"));
 
 	m_hethateyeStream.Clear();
 	m_hethateyeStreamOrig.Clear();
@@ -126,10 +134,10 @@ void AppMain::Update()
 	m_mixedReality.Update();
 	m_hands.UpdateFromMixedReality(m_mixedReality);
 
-	auto startButton = m_menu.GetButton((unsigned)ButtonID::Start);
+	/*auto startButton = m_menu.GetButton((unsigned)ButtonID::Start);
 	auto stopButton = m_menu.GetButton((unsigned)ButtonID::Stop);
 	startButton->SetDisabled(m_recording || (!IsVideoFrameProcessorWantedAndReady()));
-	stopButton->SetDisabled(m_saveEyeData);
+	stopButton->SetDisabled(m_saveEyeData);*/
 
 	const XMVECTOR headPosition = m_mixedReality.GetHeadPosition();
 	const XMVECTOR headForward = m_mixedReality.GetHeadForwardDirection();

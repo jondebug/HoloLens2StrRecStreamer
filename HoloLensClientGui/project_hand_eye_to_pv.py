@@ -134,8 +134,8 @@ def project_hand_eye_to_pv(folder):
             img = cv2.circle(img, ixy, radius=3, color=colors[2])
         if pv_id % 500 == 0:
             print(f"saving picture number {pv_id}")
-        cv2.imwrite(str(output_folder / 'hands') + 'proj{}.png'.format(str(pv_id).zfill(4)), img)
-
+        #cv2.imwrite(str(output_folder / 'hands') + 'proj{}.png'.format(str(sample_timestamp).zfill(4)), img)
+        cv2.imwrite(f"{output_folder}/{str(sample_timestamp)}.png", img)
 
 if __name__ == "__main__":
     # pass the path to folder being processed
