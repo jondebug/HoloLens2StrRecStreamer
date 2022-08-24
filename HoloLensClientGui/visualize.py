@@ -6,7 +6,17 @@ import open3d as o3d
 from PIL import Image
 from pathlib import Path
 import ast
-import glob
+from glob import glob
+
+
+def visualize_all_recordings_in_path(path):
+    if "_recDir" in path and "eye_hands" not in glob(rf"{path}\*\\"):
+        print(f"calling visualize for {path}")
+        visualize(path)
+        return
+    for sub_dir in glob(rf"{path}\*\\"):
+        print(f"calling visualize_all for path: {sub_dir}, continuing search for recording dir")
+        visualize_all_recordings_in_path(sub_dir)
 
 def get_sensor_size(w_path):
     pv_info_path = w_path + "pv.txt"
@@ -18,7 +28,7 @@ def get_sensor_size(w_path):
             intrinsics_ox, intrinsics_oy, \
             intrinsics_width, intrinsics_height = ast.literal_eval(lis[0])
 
-    return intrinsics_width,intrinsics_height
+    return intrinsics_width, intrinsics_height
 
 def load_images_timestamps_from_folder(w_path,flags):
     PV_images = dict()
@@ -78,8 +88,10 @@ def load_images_timestamps_from_folder(w_path,flags):
                 img = cv2.imread(os.path.join(w_path + 'eye_hands', file))
                 eye_hands_images[filename] = img
     return PV_images,AHAT_images,Long_Throw_images,LF_images,RF_images,LL_images,RR_images,eye_hands_images
+
+
 def visualize(w_path):
-    print(os.path.join(w_path,"PV"))
+    print(os.path.join(w_path, "PV"))
     flags = {
         "PV": Path(os.path.join(w_path,"PV")).exists(),
         "long_depth": Path(os.path.join(w_path,"Depth Long Throw")).exists(),
@@ -92,6 +104,7 @@ def visualize(w_path):
     }
     print(flags)
     original_path = str(w_path)
+    recording_name = original_path.split("\\")[-1]
     w_path = str(w_path)+"\\"
     PV_images,AHAT_images,LT_images,LF_images,RF_images,LL_images,RR_images,eye_hands_images = load_images_timestamps_from_folder(str(w_path),flags)
     all_images = {**PV_images,**AHAT_images,**LT_images,**LF_images,**RF_images,**LL_images,**RR_images,**eye_hands_images}
@@ -115,7 +128,7 @@ def visualize(w_path):
     elif(flags["long_depth"] == True):
         output_image = np.zeros((max(pv_height, lt_height), pv_width + lt_width, 3))
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    video = cv2.VideoWriter(original_path +str('/video.avi'), fourcc, 15, (output_image.shape[1],output_image.shape[0]))
+    video = cv2.VideoWriter(original_path + str('/video.avi'), fourcc, 15, (output_image.shape[1],output_image.shape[0]))
 
     for timestamp in sorted(all_images.keys()):
         timestamp = str(timestamp)
@@ -203,5 +216,8 @@ def visualize(w_path):
                 #    break
     video.release()
 
-
-#visualize("C:\HoloLens\Drawer\Table_Gloves_Eviatar_08052022_1159")
+if __name__ == "__main__":
+    visualize_all_recordings_in_path(r'C:\HoloLens')
+    #TODO: check if video name change works.
+    exit(0)
+    visualize(r'C:\HoloLens')

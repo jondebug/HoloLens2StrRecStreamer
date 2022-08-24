@@ -52,20 +52,20 @@ Image_display.place(x=25, y=600)
 
 
 
-lst = ["Clothet", "Drawer", "Table"]
-sec_lst = ["Floor", "Table"]
-rd_lst = ["Gloves", "Bright light", "Dark light"]
-built = ["Eviatar","Paul", "Roie"]
+object_list = ["Closet", "Drawer", "Table"]
+background_list = ["Floor", "Table"]
+feature_list = ["Gloves", "Bright light", "Dark light", "None"]
+assembler_name_list = ["Eviatar", "Paul", "Roie"]
 
-combo_box = ttk.Combobox(root, value=lst)
+combo_box = ttk.Combobox(root, value=object_list)
 combo_box.place(x=55, y=185)
 combo_box.set("Choose")
 
-sec_combox = ttk.Combobox(root, value=sec_lst)
+sec_combox = ttk.Combobox(root, value=background_list)
 sec_combox.set("Choose")
 sec_combox.place(x=260, y=185)
 
-rd_combox = ttk.Combobox(root, value=rd_lst)
+rd_combox = ttk.Combobox(root, value=feature_list)
 rd_combox.set("Choose")
 rd_combox.place(x=460, y=185)
 
@@ -76,21 +76,21 @@ Assembler.place(x=45,y=215)
 # furniture.place(x=45, y=140)
 #
 
-who_built = ttk.Combobox(root, value=built)
+who_built = ttk.Combobox(root, value=assembler_name_list)
 who_built.set("Choose")
 who_built.place(x=55, y=260)
 
 hololens_ip = Label(root,text = "insert HoloLens ip:", font = last_font)
 hololens_ip.place(x=55,y=470)
 ip = tk.Entry(root)
-ip.insert(-1,"132.69.202.7")
+ip.insert(-1, "192.168.1.49")
 ip.place(x=280,y=480)
 
 
 hololens_root_path = Label(root,text = "path to root directory:", font = last_font)
 hololens_root_path.place(x=55,y=500)
 root_path= tk.Entry(root)
-root_path.insert(-1,"C:\HoloLens")
+root_path.insert(-1,"C:\HoloLens") #TODO:set this according to pc user
 root_path.place(x=280,y=510)
 
 process_root_path = Label(root,text = "Process directory:", font = last_font)
@@ -109,19 +109,19 @@ def getSelection(combo_box, sec_combox, rd_combox, who_built,root_path,ip):
     global fullList
     global host
     fullList.clear()
-    value = combo_box.get()
-    val2 = sec_combox.get()
-    val3 = rd_combox.get()
+    chosen_furniture = combo_box.get()
+    chosen_background = sec_combox.get()
+    chosen_extra_feature = rd_combox.get()
     builder_name = who_built.get()
     path = root_path.get()
     host = ip.get()
-    if value == 'Choose' or val2 == 'Choose' or val3 == 'Choose' or builder_name == 'Choose':
+    if chosen_furniture == 'Choose' or chosen_background == 'Choose' or chosen_extra_feature == 'Choose' or builder_name == 'Choose':
         messagebox.showinfo("Selection", "You didn't choose")
     else:
         fullList.append(path)
-        fullList.append(value)
-        fullList.append(val2)
-        fullList.append(val3)
+        fullList.append(chosen_furniture)
+        fullList.append(chosen_background)
+        fullList.append(chosen_extra_feature)
         fullList.append(builder_name)
 
 
@@ -208,28 +208,28 @@ process_Button = tk.Button(root, text="process", image=process_pic, command=lamb
 process_Button.place(x=515, y=510)
 
 
-def buildingPath(FullList):
+def buildingPath(full_feature_list):
     global updated_path
     global path_pv
     global path_AHAT
     namesList = ["pv", "Depth Long Throw"]
-    os.chdir(FullList[0])
-    os.makedirs(FullList[1],exist_ok=True)
+    os.chdir(full_feature_list[0]) #change to work dir
+    os.makedirs(full_feature_list[1], exist_ok=True) #create directory for furniture item if needed
     new_Folder = ""
-    new_Path = FullList[0] + "\\" + (FullList[1])
+    new_Path = full_feature_list[0] + "\\" + (full_feature_list[1])
 
-    for name in FullList[2:]:
-        new_Folder += "%s" % (name) + "_"
+    for name in full_feature_list[2:]:
+        new_Folder += f"{name}_"
 
-    Last_Path = new_Folder + strftime("%d%m%Y_%H%M", gmtime())
+    Last_Path = new_Folder + strftime("%d%m%Y_%H%M", gmtime()) + "_recDir"
 
     os.chdir(new_Path)
     os.mkdir(Last_Path)
     updated_path = new_Path + "\\" + Last_Path
 
-    for names in namesList:
+    for name in namesList:
         os.chdir(updated_path)
-        os.mkdir(names)
+        os.mkdir(name)
 
     path_pv = updated_path + "\\" + namesList[0]
     #path_AHAT = updated_path + "\\" + namesList[1]

@@ -12,6 +12,18 @@ from project_hand_eye_to_pv import project_hand_eye_to_pv
 from utils import check_framerates, extract_tar_file
 from save_pclouds import save_pclouds
 from convert_images import convert_images
+from glob import glob
+
+
+def process_all_recordings_in_path(path):
+
+    if "_recDir" in path and "eye_hands" not in glob(rf"{path}\*\\"):
+        print(f"calling process_all for {path}")
+        process_all(Path(path), project_hand_eye=True)
+        return
+    for sub_dir in glob(rf"{path}\*\\"):
+        print(f"calling process_all_recordings_in_path for path: {sub_dir}, continuing search for recording dir")
+        process_all_recordings_in_path(sub_dir)
 
 
 def process_all(w_path, project_hand_eye=True):
@@ -43,8 +55,8 @@ def process_all(w_path, project_hand_eye=True):
 
 
 if __name__ == '__main__':
-    w_path = Path(r'C:\HoloLens\Drawer\Table_Bright light_Paul_24082022_1214')
-    process_all(w_path, project_hand_eye=True)
+    w_path = Path(r'C:\HoloLens')
+    process_all_recordings_in_path(r'C:\HoloLens')
 #     parser = argparse.ArgumentParser(description='Process recorded data.')
 #     parser.add_argument("--recording_path", required=True,
 #                         help="Path to recording folder")
