@@ -17,6 +17,7 @@ from eye_stream_header import EYE_FRAME_STREAM, EYE_STREAM_HEADER_FORMAT
 from eye_stream_header_recorder_format import RECORDER_EYE_FRAME_STREAM, recorder_eye_frame_bytes
 from transform_eye_frame_to_recorder_eye_frame import transform_eye_frame_to_recorder_eye_frame
 import sys
+
 np.warnings.filterwarnings('ignore')
 
 # Definitions
@@ -55,8 +56,9 @@ RM_FRAME_STREAM_HEADER = namedtuple(
 )
 
 # Each port corresponds to a single stream type
+# AHAT_STREAM_PORT = 23941
+
 VIDEO_STREAM_PORT = 23940
-#AHAT_STREAM_PORT = 23941
 LONG_THROW_STREAM_PORT = 23941
 LEFT_FRONT_STREAM_PORT = 23942
 RIGHT_FRONT_STREAM_PORT = 23943
@@ -170,36 +172,34 @@ class EyeReceiverThread(FrameReceiverThread):
     def __init__(self, host):
         self.eye_flag = False
         self.prev_timestamp = 0
-        super().__init__(host, EYE_STREAM_PORT, EYE_STREAM_HEADER_FORMAT , #TODO: change back to EYE_STREAM_HEADER_FORMAT
+        super().__init__(host, EYE_STREAM_PORT, EYE_STREAM_HEADER_FORMAT,
+                         # TODO: change back to EYE_STREAM_HEADER_FORMAT
                          EYE_FRAME_STREAM, False)
 
     def get_eye_data_from_socket(self):
         # read the header in chunks
-        #print(f"waiting for {self.header_size} bytes")
         reply = self.recvall(self.header_size)
         if not reply:
             print('ERROR: Failed to receive data from stream.')
             return
 
-        print(f"reply length: {len(reply)} \n")
-        #print(f"will try to cast this data to named tupple of size: {struct.calcsize(self.header_format)}")
         data = struct.unpack(self.header_format, reply)
-        print(f"length of unpacked data: {len(data)}")
-        #print(f"residue is: {reply[self.header_size:]}")
-        #print(f"data residue: {reply[self.header_size:]}")
-        #print("the unpacked data is:", *data, f"length is {len(data)} ")
         eye_data_struct = self.header_data(*data)
-        #print(eye_data_struct)
         return eye_data_struct
 
     def listen(self):
         while True:
             self.latest_header = self.get_eye_data_from_socket()
-            print(f"received eye gaze data with timetamp {self.latest_header.timestamp} \n")
-            self.eye_flag = True
+            if self.latest_header is not None:
+                if self.prev_timestamp != self.latest_header.timestamp:
+                    self.prev_timestamp = self.latest_header.timestamp
+                    self.eye_flag = True
+                else:
+                    print(f"for some reason we got the same timestamp twice. will not save second timestamp data"
+                          f" prev timestamp = {self.prev_timestamp} new timestamp = {self.latest_header.timestamp}")
 
-            assert (self.prev_timestamp != self.latest_header.timestamp)
-            self.prev_timestamp = self.latest_header.timestamp
+            else:
+                print("for some reason lateset header is none")
 
 
 class VideoReceiverThread(FrameReceiverThread):
@@ -212,15 +212,12 @@ class VideoReceiverThread(FrameReceiverThread):
     def listen(self):
         while True:
             self.latest_header, image_data = self.get_data_from_socket()
-            print("got pv frame from socket")
             self.pv_flag = True
             self.latest_frame = np.frombuffer(image_data, dtype=np.uint8).reshape((self.latest_header.ImageHeight,
                                                                                    self.latest_header.ImageWidth,
                                                                                    self.latest_header.PixelStride))
             assert (self.prev_timestamp != self.latest_header.Timestamp)
             self.prev_timestamp = self.latest_header.Timestamp
-
-
 
     def get_mat_from_header(self, header):
         pv_to_world_transform = np.array(header[7:24]).reshape((4, 4)).T
@@ -254,6 +251,7 @@ class AhatReceiverThread(FrameReceiverThread):
         rig_to_world_transform = np.array(header[5:22]).reshape((4, 4)).T
         return rig_to_world_transform
 
+
 class LongThrowReceiverThread(FrameReceiverThread):
 
     def __init__(self, host, port, header_format, header_data, find_extrinsics=False):
@@ -268,10 +266,9 @@ class LongThrowReceiverThread(FrameReceiverThread):
                 if not np.any(self.lut):
                     self.extrinsics_header, lut_data = self.get_extrinsics_from_socket(320, 288)
                     self.lut = np.frombuffer(lut_data, dtype=np.float32).reshape((320 * 288, 3))
-                    print("got long throw LUT")
             else:
-                frame_counter +=1
-                if frame_counter%20==0:
+                frame_counter += 1
+                if frame_counter % 20 == 0:
                     print(f"got {frame_counter} long throw frames")
                 self.latest_header, image_data = self.get_data_from_socket()
 
@@ -404,28 +401,22 @@ def time_convert(sec):
 def main_function(path, HOST):
     output_path = Path(path)
 
-    video_receiver = None
     video_receiver = VideoReceiverThread(HOST)
     video_receiver.start_socket()
 
-    #ahat_extr_receiver = AhatReceiverThread(HOST, AHAT_STREAM_PORT, RM_EXTRINSICS_HEADER_FORMAT, RM_EXTRINSICS_HEADER,True)
-    #ahat_extr_receiver.start_socket()
+    # ahat_extr_receiver = AhatReceiverThread(HOST, AHAT_STREAM_PORT, RM_EXTRINSICS_HEADER_FORMAT, RM_EXTRINSICS_HEADER,True)
+    # ahat_extr_receiver.start_socket()
 
-	# long throw depth
-    lt_extr_receiver = None
-    lt_extr_receiver = LongThrowReceiverThread(HOST, LONG_THROW_STREAM_PORT, RM_EXTRINSICS_HEADER_FORMAT, RM_EXTRINSICS_HEADER,True)
+    lt_extr_receiver = LongThrowReceiverThread(HOST, LONG_THROW_STREAM_PORT, RM_EXTRINSICS_HEADER_FORMAT,
+                                               RM_EXTRINSICS_HEADER, True)
     lt_extr_receiver.start_socket()
-	
-    ################ testing eye gaze ###################
-    # ahat_extr_receiver = None
-    eye_receiver = None
-    #####################################################
+
     eye_receiver = EyeReceiverThread(HOST)
     eye_receiver.start_socket()
     eye_receiver.start_listen()
 
     video_receiver.start_listen()
-    #ahat_extr_receiver.start_listen()
+    # ahat_extr_receiver.start_listen()
     lt_extr_receiver.start_listen()
     first_line_flag = True
     ahat_receiver = None
@@ -434,42 +425,33 @@ def main_function(path, HOST):
     prev_timestamp_ahat = 0
     prev_timestamp_lt = 0
     prev_timestamp_eye_gaze = 0
-    with open(output_path / 'pv.txt', 'w', newline='') as f1,\
-            open(output_path / 'eye_data_streamer.csv', 'w', newline='') as f_eye_streamer,\
+    with open(output_path / 'pv.txt', 'w', newline='') as f1, \
             open(output_path / 'head_hand_eye.csv', 'w', newline='') as f_eye_recorder, \
             open(output_path / 'Depth Long Throw_lut.bin', 'w', newline='') as f5, \
             open(output_path / 'Depth Long Throw_rig2world.txt', 'w', newline='') as f7:
 
-
-        # open(output_path / 'Depth AHaT_rig2world.txt', 'w') as f2, \
-        # open(output_path / 'Depth AHaT_lut.bin', 'w') \
         w1 = csv.writer(f1)
-        #w2 = csv.writer(f2)
         w4 = csv.writer(f7)
-        w_eye_streamer = csv.writer(f_eye_streamer)
         w_eye_recorder = csv.writer(f_eye_recorder)
 
-        #w_eye_streamer.writerow([name for name in EYE_FRAME_STREAM._fields])
-        #w_eye_recorder.writerow([name for name in RECORDER_EYE_FRAME_STREAM._fields])
         while True:
             if eye_receiver is not None and np.any(eye_receiver.latest_header):
                 streamer_eye_data = eye_receiver.latest_header
                 curr_eye_timestamp = streamer_eye_data.timestamp
                 if prev_timestamp_eye_gaze < curr_eye_timestamp:
                     recorder_format_eye_data = transform_eye_frame_to_recorder_eye_frame(streamer_eye_data)
-                    print(f"trying to save data with timestamp: {curr_eye_timestamp} to csv file")
-                    w_eye_recorder.writerow([str(field) for field in recorder_format_eye_data]) #change all fields to strings before saving them.
-                    w_eye_streamer.writerow(streamer_eye_data)
+                    corrected_trues = [str(1) if str(field) == "True" else str(field) for field in
+                                       recorder_format_eye_data]
+                    corrected_booleans = [str(0) if str(field) == "False" else str(field) for field in corrected_trues]
+                    w_eye_recorder.writerow(corrected_booleans)  # change all fields to strings before saving them.
                     prev_timestamp_eye_gaze = curr_eye_timestamp
 
             if video_receiver is not None and np.any(video_receiver.latest_frame):
-                # save_count_pv += 1
                 latest_frame = video_receiver.latest_frame
                 pv_hdr = video_receiver.latest_header
                 curr_pv_timestamp = pv_hdr.Timestamp
                 if prev_timestamp_pv < curr_pv_timestamp and video_receiver.pv_flag:
                     cv2.imwrite(str(output_path / "PV" / (str(curr_pv_timestamp) + ".png")), latest_frame)
-                    print("received PV frame with timestamp " +(str(curr_pv_timestamp))+'\n')
                     prev_timestamp_pv = curr_pv_timestamp
                     video_receiver.pv_flag = False
 
@@ -497,7 +479,6 @@ def main_function(path, HOST):
                          pv2world_transform[3, 0], pv2world_transform[3, 1], pv2world_transform[3, 2],
                          pv2world_transform[3, 3]])
                 cv2.imshow('Photo Video Camera Stream', video_receiver.latest_frame)
-                # cv2.imwrite(r".\pv_.png", video_receiver.latest_frame)# + str(save_one))
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
 
@@ -574,13 +555,12 @@ def main_function(path, HOST):
             if lt_receiver and np.any(lt_receiver.latest_frame) and lt_receiver.lt_flag:
                 header = lt_receiver.latest_header
                 curr_lt_timestamp = header.Timestamp
-                if prev_timestamp_lt<curr_lt_timestamp:
-                    cv2.imwrite(str(output_path) +r"\Depth Long Throw\\" +str(curr_lt_timestamp) + ".pgm", (lt_receiver.latest_frame).astype(np.uint16))
-                    print("received long throw frame with timestamp" + (str(curr_lt_timestamp)))
+                if prev_timestamp_lt < curr_lt_timestamp:
+                    cv2.imwrite(str(output_path) + r"\Depth Long Throw\\" + str(curr_lt_timestamp) + ".pgm",
+                                (lt_receiver.latest_frame).astype(np.uint16))
                 prev_timestamp_lt = curr_lt_timestamp
                 lt_receiver.lt_flag = False
 
-               # depth_img = ahat_receiver.latest_frame
                 depth_hdr = lt_receiver.latest_header
                 rig2world_transform = np.array([
                     depth_hdr.rig2worldTransformM11, depth_hdr.rig2worldTransformM12, depth_hdr.rig2worldTransformM13,
@@ -593,17 +573,22 @@ def main_function(path, HOST):
                     depth_hdr.rig2worldTransformM44]).reshape(4, 4)
 
                 rig2world_transform = np.transpose(rig2world_transform)
-                w4.writerow([curr_lt_timestamp, rig2world_transform[0,0],rig2world_transform[0,1],rig2world_transform[0,2],rig2world_transform[0,3],
-                                                 rig2world_transform[1, 0],rig2world_transform[1,1],rig2world_transform[1,2],rig2world_transform[1,3],
-                                                 rig2world_transform[2, 0],rig2world_transform[2,1],rig2world_transform[2,2],rig2world_transform[2,3],
-                                                 rig2world_transform[3,0],rig2world_transform[3,1],rig2world_transform[3,2],rig2world_transform[3,3]])
+                w4.writerow(
+                    [curr_lt_timestamp, rig2world_transform[0, 0], rig2world_transform[0, 1], rig2world_transform[0, 2],
+                     rig2world_transform[0, 3],
+                     rig2world_transform[1, 0], rig2world_transform[1, 1], rig2world_transform[1, 2],
+                     rig2world_transform[1, 3],
+                     rig2world_transform[2, 0], rig2world_transform[2, 1], rig2world_transform[2, 2],
+                     rig2world_transform[2, 3],
+                     rig2world_transform[3, 0], rig2world_transform[3, 1], rig2world_transform[3, 2],
+                     rig2world_transform[3, 3]])
 
             if lt_extr_receiver and np.any(lt_extr_receiver.lut):
                 lt_extr_receiver.socket.close()
-                lt_receiver = LongThrowReceiverThread(HOST, LONG_THROW_STREAM_PORT, RM_STREAM_HEADER_FORMAT, RM_FRAME_STREAM_HEADER)
+                lt_receiver = LongThrowReceiverThread(HOST, LONG_THROW_STREAM_PORT, RM_STREAM_HEADER_FORMAT,
+                                                      RM_FRAME_STREAM_HEADER)
 
                 lt_receiver.extrinsics_header = lt_extr_receiver.extrinsics_header
-                print("saving lt lut")
                 lt_extr_receiver.lut.tofile(f5)
 
                 depth_hdr = lt_receiver.extrinsics_header
@@ -617,24 +602,22 @@ def main_function(path, HOST):
                     depth_hdr.rig2camTransformM41, depth_hdr.rig2camTransformM42, depth_hdr.rig2camTransformM43,
                     depth_hdr.rig2camTransformM44]).reshape(4, 4)
 
-
                 with open(output_path / 'Depth Long Throw_extrinsics.txt', 'w') as f6:
                     w3 = csv.writer(f6)
                     w3.writerow([rig2cam_transform[0, 0], rig2cam_transform[0, 1],
-                                  rig2cam_transform[0, 2], rig2cam_transform[0, 3],
-                                  rig2cam_transform[1, 0], rig2cam_transform[1, 1], rig2cam_transform[1, 2],
-                                  rig2cam_transform[1, 3],
-                                  rig2cam_transform[2, 0], rig2cam_transform[2, 1], rig2cam_transform[2, 2],
-                                  rig2cam_transform[2, 3],
-                                  rig2cam_transform[3, 0], rig2cam_transform[3, 1], rig2cam_transform[3, 2],
-                                  rig2cam_transform[3, 3]])
-
+                                 rig2cam_transform[0, 2], rig2cam_transform[0, 3],
+                                 rig2cam_transform[1, 0], rig2cam_transform[1, 1], rig2cam_transform[1, 2],
+                                 rig2cam_transform[1, 3],
+                                 rig2cam_transform[2, 0], rig2cam_transform[2, 1], rig2cam_transform[2, 2],
+                                 rig2cam_transform[2, 3],
+                                 rig2cam_transform[3, 0], rig2cam_transform[3, 1], rig2cam_transform[3, 2],
+                                 rig2cam_transform[3, 3]])
 
                 lt_extr_receiver = None
                 lt_receiver.start_socket()
                 lt_receiver.start_listen()
-				
-				
+
+
 if __name__ == "__main__":
     path = os.path.abspath(__file__)
     output_dir = os.path.join(path, "output_dir")

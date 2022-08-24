@@ -42,7 +42,7 @@ def process_all(w_path, project_hand_eye=True):
 
 
 if __name__ == '__main__':
-    w_path = Path(r'C:\Users\jonathan_pc\Desktop\HoloLens2DataAcquisition\streamer_repurposed\Floor_Gloves_Eviatar_19082022_0706')
+    w_path = Path(r'C:\HoloLens\Clothet\Floor_Gloves_Eviatar_24082022_0921')
     process_all(w_path, project_hand_eye=True)
 #     parser = argparse.ArgumentParser(description='Process recorded data.')
 #     parser.add_argument("--recording_path", required=True,
