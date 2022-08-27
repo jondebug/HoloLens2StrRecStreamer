@@ -21,12 +21,38 @@ def transform_eye_frame_to_recorder_eye_frame(streamer_eye_frame:EYE_FRAME_STREA
 
     return RECORDER_EYE_FRAME_STREAM(*recorder_dict.values())
 
+def split_eye_hand_frame(eye_hand_frame:RECORDER_EYE_FRAME_STREAM ):
+
+    hand_data_dict = {}
+    eye_data_dict = {}
+    for field_num, field_name in enumerate(eye_hand_frame._fields):
+        print (field_name)
+        if 'L_' in field_name[0:2] or 'R_' in field_name[0:2] or "Hand" in field_name:
+            # print(f"adding {field_name} to hand data")
+            hand_data_dict[field_name] = eye_hand_frame[field_num]
+
+        elif field_name == 'timestamp' or 'HeadTransform' in field_name:
+            # print(f"adding {field_name} to both datas")
+            hand_data_dict[field_name] = eye_hand_frame[field_num]
+            eye_data_dict[field_name] = eye_hand_frame[field_num]
+
+        else:
+            # print(f"adding {field_name} to eye data")
+            eye_data_dict[field_name] = eye_hand_frame[field_num]
+            assert 'eye' in field_name
+
+    return hand_data_dict, eye_data_dict
+
+
 #
 # #
 # streamer_eye_frame = EYE_FRAME_STREAM(*[i+2**60 for i in range(878)])
 # disk_space_allocation = bytearray([0 for i in range(3448)])#recorder_eye_frame_num_fields)])
 # formatted_disk_space_allocation = struct.unpack(RECORDER_EYE_STREAM_FORMAT, disk_space_allocation)
 # recorder_eye_frame = RECORDER_EYE_FRAME_STREAM(*formatted_disk_space_allocation)
+# hand_data_dict, eye_data_dict = split_eye_hand_frame(recorder_eye_frame)
+# print(hand_data_dict, len(hand_data_dict))
+# print(eye_data_dict, len(eye_data_dict))
 # recorder_dict = recorder_eye_frame._asdict()
 # streamer_dict = streamer_eye_frame._asdict()
 #

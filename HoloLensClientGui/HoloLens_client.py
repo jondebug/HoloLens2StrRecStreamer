@@ -15,7 +15,7 @@ from tkinter import *
 from tkinter import messagebox
 from eye_stream_header import EYE_FRAME_STREAM, EYE_STREAM_HEADER_FORMAT
 from eye_stream_header_recorder_format import RECORDER_EYE_FRAME_STREAM, recorder_eye_frame_bytes
-from transform_eye_frame_to_recorder_eye_frame import transform_eye_frame_to_recorder_eye_frame
+from transform_eye_frame_to_recorder_eye_frame import transform_eye_frame_to_recorder_eye_frame, split_eye_hand_frame
 import sys
 
 np.warnings.filterwarnings('ignore')
@@ -459,26 +459,34 @@ def main_function(path, HOST):
     prev_timestamp_lt = 0
     prev_timestamp_eye_gaze = 0
     with open(output_path / 'pv.txt', 'w', newline='') as f1, \
-            open(output_path / 'head_hand_eye.csv', 'w', newline='') as f_eye_recorder, \
+            open(output_path / 'head_hand_eye.csv', 'w', newline='') as f_recorder_eye_hand, \
+            open(output_path / 'eye_data.csv', 'w', newline='') as f_recorder_eye, \
+            open(output_path / 'hand_data.csv', 'w', newline='') as f_recorder_hand, \
             open(output_path / 'Depth Long Throw_lut.bin', 'w', newline='') as f5, \
             open(output_path / 'Depth Long Throw_rig2world.txt', 'w', newline='') as f7:
 
         w1 = csv.writer(f1)
         w4 = csv.writer(f7)
-        w_eye_recorder = csv.writer(f_eye_recorder)
+        w_recorder_eye_hand = csv.writer(f_recorder_eye_hand)
+
+
         while thread_flags["main_client_thread_run_flag"]:
             if eye_receiver is not None and np.any(eye_receiver.latest_header):
                 streamer_eye_data = eye_receiver.latest_header
                 curr_eye_timestamp = streamer_eye_data.timestamp
                 if prev_timestamp_eye_gaze < curr_eye_timestamp:
-                    recorder_format_eye_data = transform_eye_frame_to_recorder_eye_frame(streamer_eye_data)
-
+                    recorder_eye_hand_data = transform_eye_frame_to_recorder_eye_frame(streamer_eye_data)
+                    hand_data_dict, eye_data_dict = split_eye_hand_frame(recorder_eye_hand_data)
+                    w_recorder_eye = csv.DictWriter(f_recorder_eye, eye_data_dict.keys())
+                    w_recorder_hand = csv.DictWriter(f_recorder_hand, hand_data_dict.keys())
+                    w_recorder_eye.writerow(eye_data_dict)
+                    w_recorder_hand.writerow(hand_data_dict)
                     # save boolean values in integer format to csv for processing purposes
                     corrected_trues = [str(1) if str(field) == "True" else str(field) for field in
-                                       recorder_format_eye_data]
+                                       recorder_eye_hand_data]
                     corrected_booleans = [str(0) if str(field) == "False" else str(field) for field in corrected_trues]
 
-                    w_eye_recorder.writerow(corrected_booleans)  # change all fields to strings before saving them.
+                    w_recorder_eye_hand.writerow(corrected_booleans)  # change all fields to strings before saving them.
                     prev_timestamp_eye_gaze = curr_eye_timestamp
 
             if video_receiver is not None and np.any(video_receiver.latest_frame):
