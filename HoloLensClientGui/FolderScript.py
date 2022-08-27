@@ -4,18 +4,19 @@ import time
 from tkinter import *
 from tkinter import messagebox
 import tkinter as tk
+#TODO: maybe delete this file completely
 
-
-this_flag = True
+update_flag = True
 
 Second_font = ("Comic Sans MS", 10, "bold")
 end = 2
 start = 2
-FullList=[]
+FullList = []
+
 
 def test(last_path):
     StartWatch()
-    global this_flag
+    global update_flag
 
     # while this_flag:
     #     print("Your Path is : " + last_path)
@@ -23,7 +24,7 @@ def test(last_path):
 
 def Stop():
     # global end
-    global this_flag
+    global update_flag
     this_flag = False
     stopwatch()
     print("stopped")
@@ -31,7 +32,7 @@ def Stop():
 
 
 def update():
-    global this_flag
+    global update_flag
 
     this_flag=True
 
@@ -44,20 +45,6 @@ def display(root,duration_text,pv_text,AHAT_text):
     AHAT_display = pv_display = Label(root, text="" + AHAT_text, font=Second_font)
     # AHAT_display.place(x=110, y=340)
 
-
-def New_Sel(combo_box, sec_combox, rd_combox,who_built):
-    global FullList
-    v1 = combo_box.get()
-    v2 = sec_combox.get()
-    v3 = rd_combox.get()
-    built_by = who_built.get()
-    if v1 == 'Choose' or v2 == 'Choose' or v3 == 'Choose':
-        messagebox.showinfo("Selection", "You didn't choose")
-    else:
-        FullList.append(v1)
-        FullList.append(v3)
-        FullList.append(v3)
-        FullList.append(built_by)
 
 def counter(root,path):
         amount = len(os.listdir(path))

@@ -39,13 +39,16 @@ def load_lut(lut_filename):
     return lut
 
 
+def get_avg_delta(timestamps):
+    deltas = [(timestamps[i] - timestamps[i-1]) for i in range(1, len(timestamps))]
+    return np.mean(deltas)
+
+
 def check_framerates(capture_path):
     HundredsOfNsToMilliseconds = 1e-4
     MillisecondsToSeconds = 1e-3
 
-    def get_avg_delta(timestamps):
-        deltas = [(timestamps[i] - timestamps[i-1]) for i in range(1, len(timestamps))]
-        return np.mean(deltas)
+
 
     for (img_folder, img_ext) in folders_extensions:
         base_folder = capture_path / img_folder

@@ -1,4 +1,4 @@
-from collections import namedtuple, deque
+from collections import namedtuple
 
 wrong_format = "@2q881fcccc"
 

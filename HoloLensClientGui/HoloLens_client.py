@@ -64,12 +64,17 @@ LEFT_FRONT_STREAM_PORT = 23942
 RIGHT_FRONT_STREAM_PORT = 23943
 EYE_STREAM_PORT = 23945
 
-HOST = '132.69.202.148'  # 169.254.233.208'   # '169.254.189.82' #'192.168.1.242'
-# '192.168.1.92'
+HOST = '132.69.202.148'
 
 HundredsOfNsToMilliseconds = 1e-4
 MillisecondsToSeconds = 1e-3
 
+
+thread_flags = {"main_client_thread_run_flag": True,
+                "ahat_thread_run_flag": True,
+                "long_throw_thread_run_flag": True,
+                "eye_hat_thread_run_flag": True,
+                "pv_thread_run_flag": True}
 
 class SensorType(Enum):
     VIDEO = 1
@@ -79,8 +84,7 @@ class SensorType(Enum):
     RF_VLC = 5
 
 
-# super().__init__(host, EYE_STREAM_PORT, EYE_STREAM_HEADER_FORMAT,
-#                  EYE_FRAME_STREAM, False)
+
 class FrameReceiverThread(threading.Thread):
     def __init__(self, host, port, header_format, header_data, find_extrinsics):
         super(FrameReceiverThread, self).__init__()
@@ -173,14 +177,13 @@ class EyeReceiverThread(FrameReceiverThread):
         self.eye_flag = False
         self.prev_timestamp = 0
         super().__init__(host, EYE_STREAM_PORT, EYE_STREAM_HEADER_FORMAT,
-                         # TODO: change back to EYE_STREAM_HEADER_FORMAT
                          EYE_FRAME_STREAM, False)
 
     def get_eye_data_from_socket(self):
-        # read the header in chunks
+        # read the eye data frame in chunks
         reply = self.recvall(self.header_size)
         if not reply:
-            print('ERROR: Failed to receive data from stream.')
+            print('ERROR: Failed to receive eye data from stream.')
             return
 
         data = struct.unpack(self.header_format, reply)
@@ -188,7 +191,9 @@ class EyeReceiverThread(FrameReceiverThread):
         return eye_data_struct
 
     def listen(self):
-        while True:
+        temp_for_print = thread_flags["eye_hat_thread_run_flag"]
+        print(f"trying to listen to eye/hand data port. thread flag is: {temp_for_print}")
+        while thread_flags["eye_hat_thread_run_flag"]:
             self.latest_header = self.get_eye_data_from_socket()
             if self.latest_header is not None:
                 if self.prev_timestamp != self.latest_header.timestamp:
@@ -199,7 +204,8 @@ class EyeReceiverThread(FrameReceiverThread):
                           f" prev timestamp = {self.prev_timestamp} new timestamp = {self.latest_header.timestamp}")
 
             else:
-                print("for some reason lateset header is none")
+                print("latest header is none")
+        print(f"stopped listening to eye/hand data port. thread flag is: ", thread_flags["eye_hat_thread_run_flag"])
 
 
 class VideoReceiverThread(FrameReceiverThread):
@@ -210,7 +216,9 @@ class VideoReceiverThread(FrameReceiverThread):
                          VIDEO_FRAME_STREAM_HEADER, False)
 
     def listen(self):
-        while True:
+        temp_for_print = thread_flags["pv_thread_run_flag"]
+        print(f"trying to listen to pv port. thread flag is: {temp_for_print}")
+        while thread_flags["pv_thread_run_flag"]:
             self.latest_header, image_data = self.get_data_from_socket()
             self.pv_flag = True
             self.latest_frame = np.frombuffer(image_data, dtype=np.uint8).reshape((self.latest_header.ImageHeight,
@@ -218,6 +226,8 @@ class VideoReceiverThread(FrameReceiverThread):
                                                                                    self.latest_header.PixelStride))
             assert (self.prev_timestamp != self.latest_header.Timestamp)
             self.prev_timestamp = self.latest_header.Timestamp
+
+        print(f"stopped listening to pv data port. thread flag is: ", thread_flags["pv_thread_run_flag"])
 
     def get_mat_from_header(self, header):
         pv_to_world_transform = np.array(header[7:24]).reshape((4, 4)).T
@@ -232,7 +242,9 @@ class AhatReceiverThread(FrameReceiverThread):
         self.prev_timestamp = 0
 
     def listen(self):
-        while True:
+        temp_for_print = thread_flags["ahat_thread_run_flag"]
+        print(f"trying to listen to ahat port. thread flag is: {temp_for_print}")
+        while thread_flags["ahat_thread_run_flag"]:
             if self.find_extrinsics:
                 if not np.any(self.lut):
                     self.extrinsics_header, lut_data = self.get_extrinsics_from_socket(512, 512)
@@ -246,6 +258,7 @@ class AhatReceiverThread(FrameReceiverThread):
                 self.ahat_flag = True
                 assert (self.prev_timestamp != self.latest_header.Timestamp)
                 self.prev_timestamp = self.latest_header.Timestamp
+        print(f"stopped listening to ahat data port. thread flag is: ", thread_flags["ahat_thread_run_flag"])
 
     def get_mat_from_header(self, header):
         rig_to_world_transform = np.array(header[5:22]).reshape((4, 4)).T
@@ -261,7 +274,9 @@ class LongThrowReceiverThread(FrameReceiverThread):
 
     def listen(self):
         frame_counter = 0
-        while True:
+        temp_for_print = thread_flags["long_throw_thread_run_flag"]
+        print(f"trying to listen to long throw port. thread flag is: {temp_for_print}")
+        while thread_flags["long_throw_thread_run_flag"]:
             if self.find_extrinsics:
                 if not np.any(self.lut):
                     self.extrinsics_header, lut_data = self.get_extrinsics_from_socket(320, 288)
@@ -277,6 +292,8 @@ class LongThrowReceiverThread(FrameReceiverThread):
                 self.lt_flag = True
                 assert (self.prev_timestamp != self.latest_header.Timestamp)
                 self.prev_timestamp = self.latest_header.Timestamp
+        print(f"stopped listening to long throw data port. thread flag is: ", thread_flags["long_throw_thread_run_flag"])
+
 
     def get_mat_from_header(self, header):
         rig_to_world_transform = np.array(header[5:22]).reshape((4, 4)).T
@@ -288,7 +305,7 @@ class SpatialCamsReceiverThread(FrameReceiverThread):
         super().__init__(host, port, header_format, header_data, find_extrinsics)
 
     def listen(self):
-        while True:
+        while thread_flags["main_client_thread_run_flag"]:
             if self.find_extrinsics:
                 if not np.any(self.lut):
                     self.extrinsics_header, lut_data = self.get_extrinsics_from_socket(640, 480)
@@ -304,7 +321,7 @@ class SpatialCamsReceiverThread(FrameReceiverThread):
 
 
 ############################################
-this_flag = True
+update_flag = True
 
 Second_font = ("Comic Sans MS", 10, "bold")
 end = 2
@@ -321,18 +338,22 @@ def test(last_path):
     #     time.sleep(0.5)
 
 
-def Stop():
+def stop_all_threads():
     # global end
     global this_flag
+    global thread_flags
+    # change all flag values to false, this should close all threads
+    for flag_name in thread_flags.keys():
+        thread_flags[flag_name] = False
     this_flag = False
     stopwatch()
     print("stopped")
 
 
 def update():
-    global this_flag
+    global update_flag
 
-    this_flag = True
+    update_flag = True
 
 
 def display(root, duration_text, pv_text, AHAT_text):
@@ -346,14 +367,13 @@ def display(root, duration_text, pv_text, AHAT_text):
 
 
 def counter(root, path):
+    if path == '':
+        return
     amount = len(os.listdir(path))
     s = stopwatch()
     sum = stop - start
     print(sum)
     temp = time_convert(sum)
-    # total_time = time_convert(sum)
-    # print("Total time: ")
-    # print(total_time) # none here
     print("The FPS IS:")
     fps = amount / sum
     print(format(fps, ".3f"))
@@ -398,26 +418,39 @@ def time_convert(sec):
 
 #############################################
 
+
+
 def main_function(path, HOST):
+
+    global thread_flags
+
+    # change all flag values to True, this should enable all thread loops
+    for flag_name in thread_flags.keys():
+        thread_flags[flag_name] = True
+
+    print(thread_flags["main_client_thread_run_flag"]) #flag set by main.py
+    thread_list = []
     output_path = Path(path)
 
     video_receiver = VideoReceiverThread(HOST)
     video_receiver.start_socket()
-
+    video_receiver.start_listen()
+    thread_list.append(video_receiver)
     # ahat_extr_receiver = AhatReceiverThread(HOST, AHAT_STREAM_PORT, RM_EXTRINSICS_HEADER_FORMAT, RM_EXTRINSICS_HEADER,True)
     # ahat_extr_receiver.start_socket()
 
     lt_extr_receiver = LongThrowReceiverThread(HOST, LONG_THROW_STREAM_PORT, RM_EXTRINSICS_HEADER_FORMAT,
                                                RM_EXTRINSICS_HEADER, True)
     lt_extr_receiver.start_socket()
+    lt_extr_receiver.start_listen()
+    thread_list.append(lt_extr_receiver)
 
     eye_receiver = EyeReceiverThread(HOST)
     eye_receiver.start_socket()
     eye_receiver.start_listen()
+    thread_list.append(eye_receiver)
 
-    video_receiver.start_listen()
     # ahat_extr_receiver.start_listen()
-    lt_extr_receiver.start_listen()
     first_line_flag = True
     ahat_receiver = None
     lt_receiver = None
@@ -433,16 +466,18 @@ def main_function(path, HOST):
         w1 = csv.writer(f1)
         w4 = csv.writer(f7)
         w_eye_recorder = csv.writer(f_eye_recorder)
-
-        while True:
+        while thread_flags["main_client_thread_run_flag"]:
             if eye_receiver is not None and np.any(eye_receiver.latest_header):
                 streamer_eye_data = eye_receiver.latest_header
                 curr_eye_timestamp = streamer_eye_data.timestamp
                 if prev_timestamp_eye_gaze < curr_eye_timestamp:
                     recorder_format_eye_data = transform_eye_frame_to_recorder_eye_frame(streamer_eye_data)
+
+                    # save boolean values in integer format to csv for processing purposes
                     corrected_trues = [str(1) if str(field) == "True" else str(field) for field in
                                        recorder_format_eye_data]
                     corrected_booleans = [str(0) if str(field) == "False" else str(field) for field in corrected_trues]
+
                     w_eye_recorder.writerow(corrected_booleans)  # change all fields to strings before saving them.
                     prev_timestamp_eye_gaze = curr_eye_timestamp
 
@@ -616,7 +651,9 @@ def main_function(path, HOST):
                 lt_extr_receiver = None
                 lt_receiver.start_socket()
                 lt_receiver.start_listen()
-
+    print("exiting main client loop")
+    for flag_name in thread_flags.keys():
+        print(flag_name, thread_flags[flag_name])
 
 if __name__ == "__main__":
     path = os.path.abspath(__file__)
