@@ -26,7 +26,6 @@ def split_eye_hand_frame(eye_hand_frame:RECORDER_EYE_FRAME_STREAM ):
     hand_data_dict = {}
     eye_data_dict = {}
     for field_num, field_name in enumerate(eye_hand_frame._fields):
-        print (field_name)
         if 'L_' in field_name[0:2] or 'R_' in field_name[0:2] or "Hand" in field_name:
             # print(f"adding {field_name} to hand data")
             hand_data_dict[field_name] = eye_hand_frame[field_num]

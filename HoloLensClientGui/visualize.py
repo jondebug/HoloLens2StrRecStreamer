@@ -10,8 +10,12 @@ from glob import glob
 
 
 def visualize_all_recordings_in_path(path):
-    if "_recDir" in path and "eye_hands" not in glob(rf"{path}\*\\"):
-        print(f"calling visualize for {path}")
+    if "_recDir" in path[-8:] and "eye_hands" in os.listdir(path):
+        for child in os.listdir(path):
+            if ".avi" in child:
+                return
+        print(f"calling process_all for {path}")
+        print(os.listdir(path))
         visualize(path)
         return
     for sub_dir in glob(rf"{path}\*\\"):

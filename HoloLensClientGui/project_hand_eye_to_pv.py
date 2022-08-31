@@ -27,6 +27,10 @@ def load_pv_data(csv_path):
     with open(csv_path) as f:
         lines = f.readlines()
 
+    if len(lines) <= 0:
+        print(f"fount empty pv header file in: {csv_path}")
+        return
+
     # The first line contains info about the intrinsics.
     # The following lines (one per frame) contain timestamp, focal length and transform PVtoWorld
     n_frames = len(lines) - 1
@@ -75,7 +79,9 @@ def project_hand_eye_to_pv(folder):
 
     pv_info_path = list(folder.glob('*pv.txt'))[0]
     pv_paths = sorted(list((folder / 'PV').glob('*png')))
-    assert(len(pv_paths))
+    if len(pv_paths) == 0:
+        print(f"this is an empty recording: {folder}")
+        return -1
 
     # load head, hand, eye data
     (timestamps, _,
@@ -106,7 +112,6 @@ def project_hand_eye_to_pv(folder):
                       [0, focal_lengths[pv_id][1], principal_point[1]],
                       [0, 0, 1]])
         try:
-
             Rt = np.linalg.inv(pv2world_transforms[pv_id])
 
         except np.linalg.LinAlgError:

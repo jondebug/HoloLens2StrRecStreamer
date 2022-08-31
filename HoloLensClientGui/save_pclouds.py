@@ -263,6 +263,13 @@ def save_pclouds(folder,
         pass
 
     pv_info_path = sorted(folder.glob(r'*pv.txt'))
+    print(pv_info_path)
+    with open(list(pv_info_path)[0]) as f:
+        lines = f.readlines()
+
+    if len(lines) <= 0:
+        print(f"fount empty pv header file in: {list(pv_info_path)[0]}")
+        return
     has_pv = len(list(pv_info_path)) > 0
     if has_pv:
         (pv_timestamps, focal_lengths, pv2world_transforms, ox,
