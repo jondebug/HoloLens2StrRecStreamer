@@ -40,7 +40,9 @@ def load_pv_data(csv_path):
     for i_frame, frame in enumerate(lines[1:]):
         # Row format is
         # timestamp, focal length (2), transform PVtoWorld (4x4)
-
+        if 'nan' in frame:
+            print(frame, "invalid pv header data")
+            continue
         if len(frame) > 3:
             frame = frame.split(',')
             frame_timestamps[i_frame] = int(frame[0])
@@ -106,9 +108,11 @@ def project_hand_eye_to_pv(folder):
         try:
 
             Rt = np.linalg.inv(pv2world_transforms[pv_id])
+
         except np.linalg.LinAlgError:
             print('No pv2world transform')
             continue
+
         rvec, _ = cv2.Rodrigues(Rt[:3, :3])
         tvec = Rt[:3, 3]
 
@@ -121,7 +125,9 @@ def project_hand_eye_to_pv(folder):
                 for joint_num, joint in enumerate(transs[hand_ts]):
 
                     hand_tr = joint.reshape((1, 3))
+                    #print(Rt, hand_tr, rvec, tvec, K)
                     xy, _ = cv2.projectPoints(hand_tr, rvec, tvec, K, None)
+                    #print(xy[0][0][0], xy[0][0][1], "\nthis was the point")
                     ixy = (int(xy[0][0][0]), int(xy[0][0][1]))
                     ixy = (width - ixy[0], ixy[1])
                     img = cv2.circle(img, ixy, radius=3, color=colors[hand_id])

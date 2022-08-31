@@ -104,7 +104,8 @@ def visualize(w_path):
     }
     print(flags)
     original_path = str(w_path)
-    recording_name = original_path.split("\\")[-1]
+    recording_name = (original_path.split("\\")[-3] + "_" + original_path.split("\\")[-2])[:-7]
+    print(f"creating video {recording_name}")
     w_path = str(w_path)+"\\"
     PV_images,AHAT_images,LT_images,LF_images,RF_images,LL_images,RR_images,eye_hands_images = load_images_timestamps_from_folder(str(w_path),flags)
     all_images = {**PV_images,**AHAT_images,**LT_images,**LF_images,**RF_images,**LL_images,**RR_images,**eye_hands_images}
@@ -128,7 +129,7 @@ def visualize(w_path):
     elif(flags["long_depth"] == True):
         output_image = np.zeros((max(pv_height, lt_height), pv_width + lt_width, 3))
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    video = cv2.VideoWriter(original_path + str('/video.avi'), fourcc, 15, (output_image.shape[1],output_image.shape[0]))
+    video = cv2.VideoWriter(original_path + str(f'/{recording_name}.avi'), fourcc, 15, (output_image.shape[1],output_image.shape[0]))
 
     for timestamp in sorted(all_images.keys()):
         timestamp = str(timestamp)

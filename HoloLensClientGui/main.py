@@ -128,10 +128,10 @@ if __name__ == "__main__":
     Image_display = Label(root, image=background_image)
     Image_display.place(x=25, y=600)
 
-    object_list = ["Closet", "Drawer", "Table"]
-    background_list = ["Floor", "Table"]
-    feature_list = ["Gloves", "Bright light", "Dark light", "None"]
-    assembler_name_list = ["Eviatar", "Paul", "Roie"]
+    object_list = ["Drawer", "Table", "Coffee_Table"]
+    background_list = ["Table", "Floor"]
+    feature_list = ["None", "Gloves", "Bright light", "Dark light"]
+    assembler_name_list = ["Paul", "Eviatar", "Roie"]
 
     furniture_combo_box = ttk.Combobox(root, value=object_list)
     furniture_combo_box.place(x=55, y=185)
@@ -155,7 +155,7 @@ if __name__ == "__main__":
     hololens_ip = Label(root, text="insert HoloLens ip:", font=last_font)
     hololens_ip.place(x=55, y=470)
     ip = tk.Entry(root)
-    ip.insert(-1, "192.168.1.49")
+    ip.insert(-1, "132.69.202.47")
     ip.place(x=280, y=480)
 
     hololens_root_path = Label(root, text="path to root directory:", font=last_font)

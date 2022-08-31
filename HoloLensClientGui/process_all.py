@@ -44,7 +44,7 @@ def process_all(w_path, project_hand_eye=True):
     if (w_path / "PV").exists():
         if project_hand_eye:
             project_hand_eye_to_pv(w_path)
-    return
+
 # Process depth if recorded
     for sensor_name in ["Depth Long Throw", "Depth AHaT"]:
         if (w_path / "{}".format(sensor_name)).exists():
